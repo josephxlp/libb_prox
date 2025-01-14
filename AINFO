@@ -1,0 +1,6 @@
+
+steps:
+- 1. generate virtual files 
+- 2. generate tiles : preprocessing steps 
+- 3. resample 2 by resolution: 30,90,500,1000m 
+- 4. fillnulls [next] by data type @pep 
