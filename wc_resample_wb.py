@@ -78,7 +78,7 @@ def process_basefile(basefile,D12PATH,DXPATH, RESAMPLE_VAR_ENGING, RESAMPLE_VAR_
     os.makedirs(tXdpath, exist_ok=True)
     t12files = glob(f'{t12path}/*.tif')
     t12files = filter_files_by_endingwith(t12files, RESAMPLE_VAR_ENGING)
-    #print(len(t12files))
+    
 
     txfiles = [os.path.join(tXdpath,os.path.basename(i)) for i in t12files]
     #special_endings = ['multi_ESAWC.tif', 'tdem_DEM__Mw.tif', 'LWM.tif']
@@ -107,6 +107,7 @@ if __name__ == '__main__':
             os.makedirs(DXPATH, exist_ok=True)  
             print(f'{varname}::{DXPATH}')
             basefiles = list_base_files(OPEN_TOPOGRAPHY_DPATH,varname)
+            
             for j, basefile in enumerate(basefiles):
                 #if j > 0: break
                 ti = time.perf_counter()
