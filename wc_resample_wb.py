@@ -7,7 +7,7 @@ from glob import glob
 from concurrent.futures import ProcessPoolExecutor
 import rasterio
 from rasterio.enums import Resampling
-from upaths import (D12PATH, DPATH,varname_list,Xlist,
+from upaths import (D12PATH, DPATH,varname_list,GRIDLIST,
                     OPEN_TOPOGRAPHY_DPATH,RESAMPLE_VAR_ENGING,RESAMPLE_VAR_SPECTIAL_ENGING)
 
 
@@ -69,11 +69,12 @@ def filter_files_by_endingwith(files, var_ending):
     print(f"Filtered files count: {len(filtered_files)}/{len(files)}")
     return filtered_files
 
-def process_basefile(basefile,D12PATH,DXPATH, RESAMPLE_VAR_ENGING, RESAMPLE_VAR_SPECTIAL_ENGING):
+def process_basefile(basefile,D12PATH,DXPATH, RESAMPLE_VAR_ENGING, RESAMPLE_VAR_SPECTIAL_ENGING,GRID):
     tilename = basefile.split('/')[-3]
     print(tilename)
     t12path = os.path.join(D12PATH, tilename)
-    tXdpath = os.path.join(DXPATH, 'RESAMPLE',tilename)
+    #tXdpath = os.path.join(DXPATH, 'RESAMPLE',tilename)
+    tXdpath = os.path.join(DXPATH,tilename)
     os.makedirs(tXdpath, exist_ok=True)
     t12files = glob(f'{t12path}/*.tif')
     t12files = filter_files_by_endingwith(t12files, RESAMPLE_VAR_ENGING)
@@ -84,12 +85,14 @@ def process_basefile(basefile,D12PATH,DXPATH, RESAMPLE_VAR_ENGING, RESAMPLE_VAR_
 
     for idx in range(len(t12files)):
         fipath = t12files[idx]
+        fopath = txfiles[idx]
+        fopath = fopath.replace('.tif', f'_{GRID}.tif')
         if any(fipath.endswith(ending) for ending in RESAMPLE_VAR_SPECTIAL_ENGING):  # Fixed instruction
             print(f'running special_endings at Resampling.nearest {os.path.basename(fipath)}')
             resample_raster(fipath=fipath, bipath=basefile, fopath=txfiles[idx], algo=Resampling.nearest)
         else:
             print('running all_other_endings at Resampling.bilinear')
-            resample_raster(fipath=fipath, bipath=basefile, fopath=txfiles[idx], algo=Resampling.bilinear)
+            resample_raster(fipath=fipath, bipath=basefile, fopath=fopath, algo=Resampling.bilinear)
 
 
 
@@ -99,7 +102,8 @@ if __name__ == '__main__':
     with ProcessPoolExecutor(17) as PEX:
         for i, varname in enumerate(varname_list):
             #if i > 0: break
-            DXPATH = f'{DPATH}{Xlist[i]}'
+            GRID = GRIDLIST[i]
+            DXPATH = f'{DPATH}{GRID}'
             os.makedirs(DXPATH, exist_ok=True)  
             print(f'{varname}::{DXPATH}')
             basefiles = list_base_files(OPEN_TOPOGRAPHY_DPATH,varname)
@@ -107,7 +111,7 @@ if __name__ == '__main__':
                 #if j > 0: break
                 ti = time.perf_counter()
                 #process_basefile(basefile,D12PATH,DXPATH, RESAMPLE_VAR_ENGING, RESAMPLE_VAR_SPECTIAL_ENGING)
-                PEX.submit(process_basefile,basefile,D12PATH,DXPATH, RESAMPLE_VAR_ENGING, RESAMPLE_VAR_SPECTIAL_ENGING)
+                PEX.submit(process_basefile,basefile,D12PATH,DXPATH, RESAMPLE_VAR_ENGING, RESAMPLE_VAR_SPECTIAL_ENGING,GRID)
                 tf = time.perf_counter() - ti 
                 print(f'[INFO] ::: {tf/60} min(s)')
 
