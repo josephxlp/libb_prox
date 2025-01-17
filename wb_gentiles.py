@@ -59,8 +59,10 @@ if __name__ == '__main__':
     egm08_fpath = gpaths['egm08']
     egm96_fpath = gpaths['egm96']
     s1_fpath = gpaths['multi_S1']
-    #s2_fpath = gpaths['multi_S2RGB']
-    s2_fpath = gpaths['multi_S2']
+    try:
+        s2_fpath = gpaths['multi_S2RGB']
+    except ValueError:
+        s2_fpath = gpaths['multi_S2']
 
     num_processes = int(multiprocessing.cpu_count() * 0.75)
     pool = multiprocessing.Pool(processes=num_processes)

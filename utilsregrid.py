@@ -8,6 +8,8 @@ import pandas as pd
 
 from scipy import ndimage
 from sklearn.preprocessing import MinMaxScaler
+from upaths import s2bandnames
+from utilssentinelii import get_indices, split_raster_by_bands
 
 import utilsvrt as uops 
 mem_drv = gdal.GetDriverByName('MEM')
@@ -457,6 +459,15 @@ def regrid_datasets(
     s2_tile = format_tile_fpath(tilename_dpath, tilename, s2_fpath)
     gdal_regrid(s2_fpath, s2_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['s2'] = s2_tile
+
+    bandfiles = split_raster_by_bands(s2_tile,s2bandnames)
+    bfiles = bandfiles[:5]
+    afiles = bandfiles[5:]
+    for afile in afiles: 
+        print(f'deleing in split_raster_by_bands {afile}')
+        os.remove(afile)
+        get_indices(bfiles)
+
     
     # clipping 
     tdem_dem_tile = format_tile_fpath(tilename_dpath, tilename, tdem_dem_fpath)
