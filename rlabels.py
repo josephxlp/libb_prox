@@ -99,6 +99,9 @@ def gen_label_by_man_threshold(dsm_path, dtm_path, mask_path, threshold=0.5):
     #import numpy as np
     #from osgeo import gdal
 
+    threshold = str(threshold).replace('.', 'p')
+    mask_path = mask_path.replace('.tif', f'_{threshold}.tif')
+
     # Open the DSM and DTM files
     dsm_ds = gdal.Open(dsm_path)
     dtm_ds = gdal.Open(dtm_path)
