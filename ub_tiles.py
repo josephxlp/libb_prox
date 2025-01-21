@@ -1,156 +1,11 @@
 import os 
-import subprocess
-from osgeo import gdal, gdalconst
-import rasterio 
-from rasterio import features
-import numpy as np
-import pandas as pd
-
-from scipy import ndimage
-from sklearn.preprocessing import MinMaxScaler
-from upaths import s2bandnames
-from utilssentinelii import get_indices, split_raster_by_bands
-
+from rgrid import format_tile_fpath, gdal_regrid, get_raster_info
+from rfilter import (classify_lwm_CopWBM, classify_lwm_CopWBM, classify_lwm_TanDEMX_LCM,
+                     filter_tandemx_noise,filter_water,combine_water_masks,classify_lwm_ESAWC)
+from rlabels import gen_label_by_man_threshold
 import ua_vrts as uops 
-mem_drv = gdal.GetDriverByName('MEM')
-gtif_drv = gdal.GetDriverByName('GTiff')
-vrt_drv = gdal.GetDriverByName("VRT")
-# do this differently for efficiently 
 
-
-
-
-
-
-
-# def open_ds(path):
-#     """Open a dataset in read-only mode using GDAL."""
-#     try:
-#         return gdal.Open(path, gdal.GA_ReadOnly)
-#     except RuntimeError as e:
-#         print(f"Error opening file {path}: {e}")
-#         return None
-
-# def get_bands(ds, nbands):
-#     """Retrieve a specific raster band from the dataset."""
-#     return ds.GetRasterBand(nbands)
-
-# def get_band_ndv(band):
-#     """Determine the NoData value for a raster band."""
-#     ndv = band.GetNoDataValue()
-#     if ndv is None:
-#         data_array = band.ReadAsArray()
-#         max_val = np.max(data_array)
-#         min_val = np.min(data_array)
-
-#         if min_val < 0 and min_val <= -9999:
-#             ndv = min_val
-#         elif max_val > abs(-9999.):
-#             ndv = max_val
-#     return ndv
-
-# def band_get_masked_array(band):
-#     """Return a masked array of the raster band."""
-#     ndv = get_band_ndv(band)
-#     return np.ma.masked_values(band.ReadAsArray(), ndv)
-
-# def file_get_masked_array(path, nbands):
-#     """Open a dataset and return a masked array for a specified band."""
-#     ds = open_ds(path)
-#     if ds is None:
-#         return None
-#     band = get_bands(ds, nbands)
-#     return band_get_masked_array(band)
-
-# def write_mask_as_geotif(input_file, mask, output_file):
-#     """Write the mask array to a new GeoTIFF file as uint8."""
-#     ds = open_ds(input_file)
-#     if ds is None:
-#         return
-
-#     if os.path.exists(output_file):
-#         os.remove(output_file)
-
-#     driver = gdal.GetDriverByName('GTiff')
-#     dataset = driver.Create(
-#         output_file, ds.RasterXSize, ds.RasterYSize, 1, gdal.GDT_Byte)
-#     dataset.SetGeoTransform(ds.GetGeoTransform())
-#     dataset.SetProjection(ds.GetProjection())
-#     band = dataset.GetRasterBand(1)
-#     band.WriteArray(mask.astype(np.uint8))
-#     dataset = None
-
-# def write_geotif(input_file, output_file, data_array, ndvalue=-9999.):
-#     """Write a masked array to a new GeoTIFF file."""
-#     ds = open_ds(input_file)
-#     if ds is None:
-#         return
-
-#     if os.path.exists(output_file):
-#         os.remove(output_file)
-
-#     data_array.set_fill_value(ndvalue)
-#     driver = gdal.GetDriverByName('GTiff')
-#     dataset = driver.Create(
-#         output_file, ds.RasterXSize, ds.RasterYSize,
-#         ds.RasterCount, ds.GetRasterBand(1).DataType)
-#     dataset.SetMetadata(ds.GetMetadata())
-#     dataset.SetGeoTransform(ds.GetGeoTransform())
-#     dataset.SetProjection(ds.GetProjection())
-#     band = dataset.GetRasterBand(1)
-#     band.SetNoDataValue(ndvalue)
-#     band.WriteArray(data_array.filled())
-#     dataset = None
-
-# def filter_tandemx_noise(dem_file, hem_file, com_file, n_iter=1):
-#     fdem_file = dem_file.replace('.tif', '_F.tif')
-#     mask_file = dem_file.replace('.tif', '_M.tif')
-
-#     """Process DEM data by applying masks and write the result to a new file."""
-#     gdal.UseExceptions()
-#     print('Loading and preprocessing DEM')
-#     ds = open_ds(dem_file)
-#     if ds is None:
-#         return
-
-#     band = get_bands(ds, 1)
-#     dem = band_get_masked_array(band)
-#     print(f"DEM valid pixel count: {dem.count()}")
-#     mask = np.ma.getmaskarray(dem)
-
-#     print('Loading HEM and COM')
-#     hem = file_get_masked_array(hem_file, 1)
-#     com = file_get_masked_array(com_file, 1)
-
-#     if hem is None or com is None:
-#         return
-
-#     max_err_multi = 1.5
-#     mask = np.logical_or(mask, (hem.data > max_err_multi))
-#     com_invalid = (0, 1, 2)
-#     mask = np.logical_or(mask, np.isin(com.data, com_invalid))
-
-#     print('Applying Masks')
-#     dem_masked = np.ma.array(dem, mask=mask)
-#     mask = ndimage.binary_dilation(mask, iterations=n_iter)
-#     mask = ndimage.binary_erosion(mask, iterations=n_iter)
-
-#     # Write the mask to a new GeoTIFF file
-#     write_mask_as_geotif(dem_file, mask, mask_file)
-
-#     dem_masked = np.ma.array(dem, mask=mask)
-#     ndvalue = get_band_ndv(band)
-#     write_geotif(dem_file, fdem_file, dem_masked, ndvalue)
-#     return fdem_file, mask_file
-
-
-
-
-
-
-
-def regrid_datasets(
-
+def retile_datasets(
     ds_tiles_dpath, tilename, xmin, ymin, xmax, ymax, xres, yres,
     tdem_dem_fpath, tdem_hem_fpath, tdem_wam_fpath, tdem_com_fpath, 
     cdem_wbm_fpath, esawc_fpath, dtm_fpath, 
@@ -162,22 +17,23 @@ def regrid_datasets(
     tilename_dpath = os.path.join(ds_tiles_dpath, tilename)
     os.makedirs(tilename_dpath,exist_ok=True)
     ds = {}
+
     s1_tile = format_tile_fpath(tilename_dpath, tilename, s1_fpath)
     gdal_regrid(s1_fpath, s1_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['s1'] = s1_tile
     
-
+    print(s2_fpath)
     s2_tile = format_tile_fpath(tilename_dpath, tilename, s2_fpath)
     gdal_regrid(s2_fpath, s2_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['s2'] = s2_tile
 
-    bandfiles = split_raster_by_bands(s2_tile,s2bandnames)
-    bfiles = bandfiles[:5]
-    afiles = bandfiles[5:]
-    for afile in afiles: 
-        print(f'deleing in split_raster_by_bands {afile}')
-        os.remove(afile)
-        get_indices(bfiles)
+    # bandfiles = split_raster_by_bands(s2_tile,s2bandnames)
+    # bfiles = bandfiles[:5]
+    # afiles = bandfiles[5:]
+    # for afile in afiles: 
+    #     print(f'deleing in split_raster_by_bands {afile}')
+    #     os.remove(afile)
+    #     get_indices(bfiles)
 
     
     # clipping 
@@ -223,13 +79,13 @@ def regrid_datasets(
     if not os.path.isfile(esa_lwm_fn):
         classify_lwm_ESAWC(esawc_tile, esa_lwm_fn,water_code=80)
     ds['esawc_lwm'] = esa_lwm_fn
-
  
     lwm_a_fn = edem_lcm_tile.replace('.tif', '_LWM_A.tif')
     lwm_b_fn = edem_lcm_tile.replace('.tif', '_LWM_B.tif')
     if not os.path.isfile(lwm_a_fn):
         classify_lwm_TanDEMX_LCM(edem_lcm_tile,lwm_a_fn,lwm_b_fn)
         #elcm_fna, elcm_fnb = classify_lwm_TanDEMX_LCM(edem_lcm_tile,lwm_a_fn,lwm_b_fn)
+
 
 
     ds['edem_lcm_lwma'] = lwm_a_fn
@@ -239,7 +95,6 @@ def regrid_datasets(
     fdem_file = tdem_dem_tile.replace('.tif', '_F.tif')
     mask_file = tdem_dem_tile.replace('.tif', '_M.tif')
     if not os.path.isfile(fdem_file):
-    
         fdem_file, mask_file = filter_tandemx_noise(tdem_dem_tile, 
                                                     tdem_hem_tile, 
                                                     tdem_com_tile, 
@@ -247,7 +102,6 @@ def regrid_datasets(
     
     ds['tdem_dem_f'] = fdem_file
     ds['tdem_dem_m'] = mask_file
-    
     
     dem_fw = fdem_file.replace('F.tif', '_Fw.tif')
     dem_mw = mask_file.replace('M.tif', '_Mw.tif')
@@ -299,6 +153,25 @@ def regrid_datasets(
     gdal_regrid(edem_edem_W84_fpath, edem_demw84_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['edem_demw84'] = edem_demw84_tile 
 
+    egm08_tile = format_tile_fpath(tilename_dpath, tilename, egm08_fpath)
+    gdal_regrid(egm08_fpath, egm08_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
+    ds['egm08'] = egm08_tile
+   
+    egm96_tile = format_tile_fpath(tilename_dpath, tilename, egm96_fpath)
+    gdal_regrid(egm96_fpath, egm96_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
+    ds['egm96'] = egm96_tile
+
+    pdem_label_tile = pdem_tile.replace('.tif', '_label.tif')
+    if not os.path.isfile(pdem_label_tile):
+        gen_label_by_man_threshold(edem_demw84_tile, pdem_tile, pdem_label_tile, threshold=0.5)
+
+    ds['pdem_label'] = pdem_label_tile
+    ldem_label_tile = ldar_tile.replace('.tif', '_label.tif') 
+    if not os.path.isfile(ldem_label_tile):
+        gen_label_by_man_threshold(edem_demw84_tile, pdem_tile, ldem_label_tile, threshold=0.5)
+
+    ds['ldem_label'] = ldem_label_tile
+
     #cdem_demw84_tile
     #ds['cdem_demw84'] = cdem_dem_tile
 
@@ -318,28 +191,22 @@ def regrid_datasets(
     # gdal_regrid(wsfbv_fpath, wsfbv_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     # ds['wsfbv'] = wsfbv_tile
 
-    egm08_tile = format_tile_fpath(tilename_dpath, tilename, egm08_fpath)
-    gdal_regrid(egm08_fpath, egm08_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
-    ds['egm08'] = egm08_tile
    
 
-    egm96_tile = format_tile_fpath(tilename_dpath, tilename, egm96_fpath)
-    gdal_regrid(egm96_fpath, egm96_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
-    ds['egm96'] = egm96_tile
 
 
 
-    s2_tilex = scale_tif(s2_tile)
-    ds['s2x'] = s2_tilex
+    # s2_tilex = scale_tif(s2_tile)
+    # ds['s2x'] = s2_tilex
 
-    s1_tilex = scale_tif(s1_tile)
-    ds['s1x'] = s1_tilex
+    # s1_tilex = scale_tif(s1_tile)
+    # ds['s1x'] = s1_tilex
 
-    egm96_tilex = scale_tif(egm96_tile)
-    ds['egm96x'] = egm96_tilex
+    # egm96_tilex = scale_tif(egm96_tile)
+    # ds['egm96x'] = egm96_tilex
 
-    egm08_tilex = scale_tif(egm08_tile)
-    ds['egm08x'] = egm08_tilex
+    # egm08_tilex = scale_tif(egm08_tile)
+    # ds['egm08x'] = egm08_tilex
 
     #tdem_dem_clean_tile = tdem_dem_tile.replace('.tif', '_clean.tif')
     #tdem_erode_tile = tdem_dem_tile.replace('.tif', '_E.tif')
@@ -432,8 +299,6 @@ def regrid_datasets(
     print('Already exists!!')
     print(ds)
 
-
-
 def process_tile(
         basefile, ds_tiles_dpath, tdem_dem_fpath, tdem_hem_fpath, 
         tdem_wam_fpath, tdem_com_fpath, cdem_wbm_fpath, esawc_fpath, 
@@ -449,13 +314,11 @@ def process_tile(
     tile_fpath = format_tile_fpath(tilename_dpath, tilename, tdem_dem_fpath) 
     proj, xres, yres, xmin, xmax, ymin, ymax, w, h = get_raster_info(basefile)
     print('dst size:', w, h)
-    regrid_datasets(
-
-    ds_tiles_dpath, tilename, xmin, ymin, xmax, ymax, xres, yres,
-    tdem_dem_fpath, tdem_hem_fpath, tdem_wam_fpath, tdem_com_fpath, 
-    cdem_wbm_fpath, esawc_fpath, dtm_fpath,
-    pdem_fpath, cdem_dem_fpath, edem_dem_fpath,egm08_fpath,edem_edem_W84_fpath,
-    egm96_fpath,edem_lcm_fpath,s1_fpath, s2_fpath
+    retile_datasets(
+        ds_tiles_dpath, tilename, xmin, ymin, xmax, ymax, xres, yres,
+        tdem_dem_fpath, tdem_hem_fpath, tdem_wam_fpath, tdem_com_fpath, 
+        cdem_wbm_fpath, esawc_fpath, dtm_fpath,
+        pdem_fpath, cdem_dem_fpath, edem_dem_fpath,egm08_fpath,edem_edem_W84_fpath,
+        egm96_fpath,edem_lcm_fpath,s1_fpath, s2_fpath
     )
 
-    

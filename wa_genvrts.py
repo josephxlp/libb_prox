@@ -8,12 +8,13 @@ from upaths import (WDIR,pband_k,preview_k,single_path_names,
                     esa_path,pband_dpath,tdemx_dpath,
                     edem_vars,cdem_vars,tdem_vars,     
                     epsg,xres,multi_vars,
-                    SENTINEL1_DPATH, SENTINEL2_DPATH)
-import utilsvrt as uops 
+                    SENTINEL1_DPATH, S2_RGB_dpath)
+import ua_vrts as uops 
 from concurrent.futures import ProcessPoolExecutor
 import time 
 cpus = int(cpu_count() * 0.75)
 
+SENTINEL2_DPATH = S2_RGB_dpath
 
 if __name__ == '__main__':
     ti = time.perf_counter()
