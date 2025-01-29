@@ -3,6 +3,7 @@ from rgrid import format_tile_fpath, gdal_regrid, get_raster_info
 from rfilter import (classify_lwm_CopWBM, classify_lwm_CopWBM, classify_lwm_TanDEMX_LCM,
                      filter_tandemx_noise,filter_water,combine_water_masks,classify_lwm_ESAWC)
 from rlabels import gen_label_by_man_threshold
+from rtransforms import dem_derivative
 import ua_vrts as uops 
 
 def retile_datasets(
@@ -85,7 +86,6 @@ def retile_datasets(
     if not os.path.isfile(lwm_a_fn):
         classify_lwm_TanDEMX_LCM(edem_lcm_tile,lwm_a_fn,lwm_b_fn)
         #elcm_fna, elcm_fnb = classify_lwm_TanDEMX_LCM(edem_lcm_tile,lwm_a_fn,lwm_b_fn)
-
 
 
     ds['edem_lcm_lwma'] = lwm_a_fn
@@ -171,6 +171,32 @@ def retile_datasets(
         gen_label_by_man_threshold(edem_demw84_tile, pdem_tile, ldem_label_tile, threshold=0.5)
 
     ds['ldem_label'] = ldem_label_tile
+
+    # Define file paths for new terrain derivatives
+    tile_slp = edem_demw84_tile.replace('.tif', '_slp.tif')
+    tile_tpi = edem_demw84_tile.replace('.tif', '_tpi.tif')
+    tile_tri = edem_demw84_tile.replace('.tif', '_tri.tif')
+    tile_roughness = edem_demw84_tile.replace('.tif', '_rgx.tif')
+
+    # Compute Slope
+    if not os.path.isfile(tile_slp):
+        dem_derivative(fi=edem_demw84_tile, fo=tile_slp, mode='slope')
+    ds['edem_slp'] = tile_slp
+
+    # Compute TPI
+    if not os.path.isfile(tile_tpi):
+        dem_derivative(fi=edem_demw84_tile, fo=tile_tpi, mode='TPI')
+    ds['edem_tpi'] = tile_tpi
+
+    # Compute TRI
+    if not os.path.isfile(tile_tri):
+        dem_derivative(fi=edem_demw84_tile, fo=tile_tri, mode='TRI')
+    ds['edem_tri'] = tile_tri
+
+    # Compute Roughness
+    if not os.path.isfile(tile_roughness):
+        dem_derivative(fi=edem_demw84_tile, fo=tile_roughness, mode='roughness')
+    ds['edem_rgx'] = tile_roughness
 
     #cdem_demw84_tile
     #ds['cdem_demw84'] = cdem_dem_tile
@@ -260,35 +286,7 @@ def retile_datasets(
     # ds['pdem_label'] = pdem_label_tile
 
         
-    # tile_slp = tdem_filled_tile.replace('.tif', '_slp.tif')
-    # if not os.path.isfile(tile_slp):
-    #     dem_derivative(tdem_filled_tile, tile_slp, 'slope')
-    #     run_gdal_fillnodata(tile_slp,tile_slp)
-    # ds['tdem_dem_slp'] = tile_slp
-
-    # tile_hsd = tdem_filled_tile.replace('.tif', '_hsd.tif')
-    # if not os.path.isfile(tile_hsd):
-    #     dem_derivative(tdem_filled_tile, tile_hsd, 'hillshade')
-    #     run_gdal_fillnodata(tile_hsd,tile_hsd)
-    # ds['tdem_dem_hsd'] = tile_hsd
-
-    # tile_tri = tdem_filled_tile.replace('.tif', '_tri.tif')
-    # if not os.path.isfile(tile_tri):
-    #     dem_derivative(tdem_filled_tile, tile_tri, 'TRI')
-    #     run_gdal_fillnodata(tile_tri,tile_tri)
-    # ds['tdem_dem_tri'] = tile_tri
-
-    # tile_tpi = tdem_filled_tile.replace('.tif', '_tpi.tif')
-    # if not os.path.isfile(tile_tpi):
-    #     dem_derivative(tdem_filled_tile, tile_tpi, 'TPI')
-    #     run_gdal_fillnodata(tile_tpi,tile_tpi)
-    # ds['tdem_dem_tpi'] = tile_tpi
-
-    # tile_rgx = tdem_filled_tile.replace('.tif', '_rgx.tif')
-    # if not os.path.isfile(tile_rgx):
-    #     dem_derivative(tdem_filled_tile, tile_rgx, 'roughness')
-    #     run_gdal_fillnodata(tile_rgx,tile_rgx)
-    # ds['tdem_dem_rgx'] = tile_rgx
+      
 
     yaml_tile = os.path.join(tilename_dpath, f'{tilename}_ds.yaml')
     # csv_tile = os.path.join(tilename_dpath, f'{tilename}_ds.csv')

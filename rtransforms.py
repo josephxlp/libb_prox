@@ -36,7 +36,7 @@ def scale_tif(fpath):
     return output_fpath
 
 
-def dem_derivative(fi, fo, mode):
+def dem_derivative(fi, fo, mode='slope'):
     valid_modes = ['hillshade', 'slope', 'aspect', 'TRI', 'TPI', 'roughness']
     
     if mode not in valid_modes:

@@ -99,7 +99,7 @@ def match_baseline_to_12m_files(basefile,D12PATH,DXPATH):
 varname_list = ['COP30', 'COP90','GEBCOSubIceTopo', 'GEDI_L3']
 GRIDLIST = [30,90,500,1000]
 VAROI = RESAMPLE_VAR_ENGING = [
-    'EGM08.tif','EGM96.tif', 'tdem_HEM.tif','S1.tif','S2.tif'
+    'EGM08.tif','EGM96.tif', 'tdem_HEM.tif','S1.tif','S2.tif',
     'NegroAOIDTM.tif', 'multi_DTM_LiDAR.tif','tdem_DEM.tif','edem_W84.tif',
     'tdem_DEM__Fw.tif','cdem_DEM.tif']
 RESAMPLE_VAR_SPECTIAL_ENGING = ['multi_ESAWC.tif']#,
