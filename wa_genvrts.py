@@ -8,7 +8,7 @@ from upaths import (WDIR,pband_k,preview_k,single_path_names,
                     esa_path,pband_dpath,tdemx_dpath,
                     edem_vars,cdem_vars,tdem_vars,     
                     epsg,xres,multi_vars,
-                    SENTINEL1_DPATH, S2_RGB_dpath)
+                    SENTINEL1_DPATH, S2_RGB_dpath,L8_allbands_dpath)
 import ua_vrts as uops 
 from concurrent.futures import ProcessPoolExecutor
 import time 
@@ -75,9 +75,10 @@ if __name__ == '__main__':
     print('S1 and S2 processing... ')
     s1_files =  glob.glob(f'{SENTINEL1_DPATH}/*/*.tif', recursive=True); print(len(s1_files))
     s2_files =  glob.glob(f'{SENTINEL2_DPATH}/*/*.tif', recursive=True); print(len(s2_files))
+    l8_files =  glob.glob(f'{L8_allbands_dpath}/*/*.tif', recursive=True); print(len(l8_files))
+    
 
-
-    mfiles = [esa_files, ldar_wrapped_files,s1_files,s2_files]
+    mfiles = [esa_files, ldar_wrapped_files,s1_files,s2_files,l8_files]
     # #mfiles = [ethchm_files, esawc_files , wsf2019_files, gfc2020_files,
     # #         dtm_wrapped_files]#,dsm_wrapped_files]
 
