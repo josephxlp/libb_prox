@@ -8,3 +8,14 @@ steps:
 
 other tasks:
 - clean code and better documentation 
+
+
+details:
+- genvrts.py : 
+  - make sure the vrt are not recreate  if they already exist[+]
+- gentiles.py:
+  - add L8 data 
+  - remove single bands S1, and S2, and use the bands in memory to get indices 
+
+#LABELS 
+@develop agglomerative method of classfiication to create labels 
