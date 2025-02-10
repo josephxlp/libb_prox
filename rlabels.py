@@ -433,5 +433,59 @@ def label_normthresh(dsm_path, dtm_path, threshold=0.5, overwrite=False, norm=Tr
 
     print(f"Mask created and saved to {mask_path}")
 
+##################################
+
+def label_height_adathresh(dsm_path, dtm_path, dynamic=True, base_threshold=0.5, overwrite=False):
+    d_str = "y" if dynamic else "n"
+    mask_path = dtm_path.replace('.tif', f'_label_height_adathresh_d{d_str}.tif')
+    
+    # Check if file exists, and overwrite flag is set
+    if os.path.exists(mask_path) and not overwrite:
+        print(f"File {mask_path} already exists. Use overwrite=True to replace it.")
+        return
+
+    with rasterio.open(dsm_path) as dsm_ds, rasterio.open(dtm_path) as dtm_ds:
+        if dsm_ds is None or dtm_ds is None:
+            raise FileNotFoundError("DSM or DTM file not found.")
+        
+        # Read data (assuming single-band rasters) and ensure they're treated as floats
+        dsm_data = dsm_ds.read(1).astype(float)  # Convert to float to handle NaN
+        dtm_data = dtm_ds.read(1).astype(float)  # Convert to float to handle NaN
+        
+        # Remove extreme outliers (set them to NaN)
+        dsm_data[(dsm_data < -999) | (dsm_data > 1000)] = np.nan
+        dtm_data[(dtm_data < -999) | (dtm_data > 1000)] = np.nan
+        
+        # Ensure both arrays have the same shape
+        if dsm_data.shape != dtm_data.shape:
+            raise ValueError("DSM and DTM must have the same dimensions.")
+        
+        # Compute height differences
+        height_diff = dsm_data - dtm_data
+
+        # Determine threshold adaptively or use fixed value
+        if dynamic:
+            valid_diff = height_diff[~np.isnan(height_diff)]
+            threshold = np.mean(valid_diff) + np.std(valid_diff)
+        else:
+            threshold = base_threshold
+        
+        print(f"Using threshold: {threshold}")
+
+        # Create mask with values 2 for ground and 1 for non-ground
+        mask = np.full(dsm_data.shape, 2, dtype=np.uint8)  # Default to 2 (ground)
+        mask[(np.isnan(dsm_data)) | (np.isnan(dtm_data)) | (height_diff >= threshold)] = 1  # Non-ground (high points)
+        
+        # Adjust the mask path to include threshold value
+        mask_path = mask_path.replace('.tif', f'_label_height_mask{threshold}.tif')
+        print(f"Saving mask to {mask_path}")
+        
+        # Save the mask as a GeoTIFF
+        with rasterio.open(mask_path, 'w', driver='GTiff', count=1, dtype='uint8', 
+                           width=dsm_ds.width, height=dsm_ds.height, crs=dsm_ds.crs, 
+                           transform=dsm_ds.transform) as mask_ds:
+            mask_ds.write(mask, 1)
+    
+    print(f"Mask created and saved to {mask_path}")
 
 

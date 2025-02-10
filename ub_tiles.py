@@ -196,16 +196,12 @@ def retile_datasets(
     label_normthresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, threshold=0.5, overwrite=False, norm=True)
     label_normthresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, threshold=0.5, overwrite=False, norm=False)
 
+    label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, dynamic=True, base_threshold=0.5, overwrite=False)
+    label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, dynamic=True, base_threshold=0.5, overwrite=False)
 
-    # unsupervised_landcover_mask(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, mask_path=pdem_label_tile, window_size=5, n_clusters=2)
-    # unsupervised_landcover_mask(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, mask_path=ldem_label_tile, window_size=5, n_clusters=2)
+    label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, dynamic=False, base_threshold=0.5, overwrite=False)
+    label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, dynamic=False, base_threshold=0.5, overwrite=False)
 
-    
-    # dbscan_landcover_mask(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, mask_path=pdem_label_tile, window_size=5, eps=0.5, min_samples=10)
-    # dbscan_landcover_mask(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, mask_path=pdem_label_tile, window_size=5, eps=0.5, min_samples=10)
-
-    # kmeans_classify_dsm_dtm(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, output_path=pdem_label_tile, n_clusters=2)
-    # kmeans_classify_dsm_dtm(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, output_path=pdem_label_tile, n_clusters=2)
     # Define file paths for new terrain derivatives
     tile_slp = edem_demw84_tile.replace('.tif', '_slp.tif')
     tile_tpi = edem_demw84_tile.replace('.tif', '_tpi.tif')
