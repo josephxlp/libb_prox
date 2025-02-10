@@ -102,7 +102,20 @@ VAROI = RESAMPLE_VAR_ENGING = [
     'EGM08.tif','EGM96.tif', 'tdem_HEM.tif','S1.tif','S2.tif',
     'NegroAOIDTM.tif', 'multi_DTM_LiDAR.tif','tdem_DEM.tif','edem_W84.tif',
     'tdem_DEM__Fw.tif','cdem_DEM.tif']
-RESAMPLE_VAR_SPECTIAL_ENGING = ['multi_ESAWC.tif']#,
+
+
+RESAMPLE_VAR_SPECTIAL_ENGING = ['multi_ESAWC.tif'
+                                
+                                'multi_DTM_LiDAR_label_kmeans_slope.tif'
+                                'multi_DTM_LiDAR_label_kmeans.tif'
+                                'multi_DTM_LiDAR_label_slope_adathresh.tif'
+
+                                'multi_ESAWC_label_landdata.tif'
+
+                                'NegroAOIDTM_label_kmeans_slope.tif'
+                                'NegroAOIDTM_label_kmeans.tif'
+                                'NegroAOIDTM_label_slope_adathresh.tif'
+                                ]#,
 
 def process_raster(varname, GRID, TILESX_DPATH, OPEN_TOPOGRAPHY_DPATH, TILES12_DPATH, DXPATH):
     """
