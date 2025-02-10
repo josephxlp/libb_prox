@@ -15,23 +15,23 @@ def get_tile_names(tile_files, tilename, X):
     #tile_names = [name.replace(f'_{X}', '').replace(f'{tilename}_', '').lower() for name in tile_names]
     return tile_names
 
-def get_tile_files(DPATH, X, tilename):
+def get_tile_files(DPATH, X, tilename,dataname='byldem'):
     """
     Retrieves tile files and the corresponding parquet file path.
     """
     TILESX = f"{DPATH}{X}"
     tile_dpath = f'{TILESX}/{tilename}'
-    fparquet = f'{tile_dpath}/{tilename}_byldem.parquet'
+    fparquet = f'{tile_dpath}/{tilename}_{dataname}.parquet'
     tile_files = glob(f'{tile_dpath}/*.tif')
     return tile_files, fparquet
 
-def list_files_by_tilenames(RES_DPATH, X, tilenames):
+def list_files_by_tilenames(RES_DPATH, X, tilenames,dataname):
     """
     Lists parquet and tile files for multiple tiles.
     """
     fparquet_list, tile_files_list = [], []
     for tilename in tilenames:
-        tile_files, fparquet = get_tile_files(RES_DPATH, X, tilename)
+        tile_files, fparquet = get_tile_files(RES_DPATH, X, tilename,dataname)
         fparquet_list.append(fparquet)
         tile_files_list.append(tile_files)
     return fparquet_list, tile_files_list
@@ -68,11 +68,16 @@ def pathlist2df(tile_files, tile_names):
     da = pd.concat(dflist,axis=1)
     return da 
 
-def tile_files_to_parquet(DPATH, X, tilename, vending_all):
+#from pprint import pprint
+def tile_files_to_parquet(DPATH, X, tilename, vending_all,dataname):
     """
     Processes raster files for a tile and saves them to a parquet file.
     """
-    tile_files, fparquet = get_tile_files(DPATH, X, tilename)
+    tile_files, fparquet = get_tile_files(DPATH, X, tilename,dataname)
+    print(fparquet)
+    print(' ')
+    print(len(tile_files))
+    #pprint(tile_files)
     tile_files = filter_files_by_endingwith(tile_files, vending_all)
 
     if not tile_files:
@@ -98,14 +103,14 @@ def tile_files_to_parquet(DPATH, X, tilename, vending_all):
     return df, fparquet
 
 
-def process_tile_files_to_parquet(tilename, RES_DPATH, X, vending_all):#, nending_all, ftnames):
+def process_tile_files_to_parquet(tilename, RES_DPATH, X, vending_all,dataname):#, nending_all, ftnames):
     """
     Processes a single tile: Reads raster files, converts them to a DataFrame, and saves them to a parquet file.
     """
-    df, fparquet = tile_files_to_parquet(RES_DPATH, X, tilename, vending_all)#, nending_all, ftnames)
+    df, fparquet = tile_files_to_parquet(RES_DPATH, X, tilename, vending_all,dataname)#, nending_all, ftnames)
     return df, fparquet
 
-def tile_files_to_parquet_parallel(tilenames, RES_DPATH, X, vending_all):#, nending_all, ftnames):
+def tile_files_to_parquet_parallel(tilenames, RES_DPATH, X, vending_all,dataname):#, nending_all, ftnames):
     """
     Processes multiple tiles in parallel using ThreadPoolExecutor.
 
@@ -127,7 +132,7 @@ def tile_files_to_parquet_parallel(tilenames, RES_DPATH, X, vending_all):#, nend
     with ThreadPoolExecutor() as executor:
         # Submit tasks for parallel execution
         futures = [
-            executor.submit(process_tile_files_to_parquet, tilename, RES_DPATH, X, vending_all)#, nending_all, ftnames)
+            executor.submit(process_tile_files_to_parquet, tilename, RES_DPATH, X, vending_all,dataname)#, nending_all, ftnames)
             for tilename in tilenames
         ]
 
