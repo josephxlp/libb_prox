@@ -9,7 +9,27 @@ import rasterio as rio
 from rasterio import windows
 from concurrent.futures import ProcessPoolExecutor
 from typing import Optional, List, Tuple
+from glob import glob
 import pandas as pd 
+
+def get_tile_dict(TILES12_DPATH,tilename,vending_all,nending_all):
+    tile_dpath = f'{TILES12_DPATH}/{tilename}'
+    tile_files = glob(f'{tile_dpath}/*.tif')
+    assert len(vending_all) == len(nending_all),'unequal lengths'
+    filter_dict = dict(zip(nending_all, vending_all))
+    filtered_dict = {
+        
+        key: [file for file in tile_files if file.endswith(value)]
+        for key, value in filter_dict.items()
+    }
+    filtered_dict = {
+    key: (matches[0] if len(matches) == 1 else None)  # Select first file if exactly one match
+    for key, value in filter_dict.items()
+    if (matches := [file for file in tile_files if file.endswith(value)])  # List comprehension for filtering
+    }
+    names, paths = split_dictionary_pair(filtered_dict)
+    assert len(names) == len(paths), 'len(names) == len(paths) failed!!!'
+    return filtered_dict,tile_dpath,names, paths
 
 
 def get_raster_meta(path: str) -> Tuple[dict, int, int]:
