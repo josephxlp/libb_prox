@@ -18,4 +18,10 @@ details:
   - remove single bands S1, and S2, and use the bands in memory to get indices 
 
 #LABELS 
-@develop agglomerative method of classfiication to create labels 
+@develop agglomerative method of classfiication to create labels [+]
+
+#TODOing
+# check the ouput if all good : recreate the datatset?
+# add count of nulls by tdem, pdem,ldem 
+# for downscaling set nulls to zero or remove?
+# add gedi-grid ::: where must downscale beging
