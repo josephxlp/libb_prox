@@ -8,11 +8,12 @@ from rfilter import (classify_lwm_CopWBM, classify_lwm_CopWBM, classify_lwm_TanD
 #                       gen_simplified_landcover_mask,generate_adaptive_slope_landcover_maskP,
 #                       gen_local_adaptive_mask,unsupervised_landcover_mask,
 #                       dbscan_landcover_mask,kmeans_classify_dsm_dtm)
-from rtransforms import dem_derivative
-from rlabels import (label_kmeans,label_slope_adathresh,label_lcmultithresh,
-                     label_lcmultithresh_slope,label_landdata,label_multiclass,
-                     label_normthresh,label_height_adathresh)
+# from rtransforms import dem_derivative
+# from rlabels import (label_kmeans,label_slope_adathresh,label_lcmultithresh,
+#                      label_lcmultithresh_slope,label_landdata,label_multiclass,
+#                      label_normthresh,label_height_adathresh)
 import ua_vrts as uops 
+from rtransforms import scale_raster,raster_calc
 
 def retile_datasets(
     ds_tiles_dpath, tilename, xmin, ymin, xmax, ymax, xres, yres,
@@ -36,16 +37,13 @@ def retile_datasets(
     gdal_regrid(s2_fpath, s2_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['s2'] = s2_tile
 
-    # bandfiles = split_raster_by_bands(s2_tile,s2bandnames)
-    # bfiles = bandfiles[:5]
-    # afiles = bandfiles[5:]
-    # for afile in afiles: 
-    #     print(f'deleing in split_raster_by_bands {afile}')
-    #     os.remove(afile)
-    #     get_indices(bfiles)
+    s2x_tile = scale_raster(s2_tile, method="minmax")
+    ds['s2x'] = s2x_tile
 
-    
-    # clipping 
+    s1x_tile = scale_raster(s1_tile, method="minmax")
+    ds['s1x'] = s1x_tile
+
+       # clipping 
     tdem_dem_tile = format_tile_fpath(tilename_dpath, tilename, tdem_dem_fpath)
     gdal_regrid(tdem_dem_fpath, tdem_dem_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['tdem_dem'] = tdem_dem_tile
@@ -54,8 +52,6 @@ def retile_datasets(
     gdal_regrid(tdem_hem_fpath, tdem_hem_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['tdem_hem'] = tdem_hem_tile
     
-    #[] hem mask 
-
     tdem_wam_tile = format_tile_fpath(tilename_dpath, tilename, tdem_wam_fpath)
     gdal_regrid(tdem_wam_fpath, tdem_wam_tile, xmin, ymin, xmax, ymax, xres, yres, mode='cat')
     ds['tdem_wam'] = tdem_wam_tile
@@ -73,7 +69,6 @@ def retile_datasets(
     gdal_regrid(edem_lcm_fpath, edem_lcm_tile, xmin, ymin, xmax, ymax, xres, yres, mode='cat')
     ds['edem_lcm'] = edem_lcm_tile
 
-    
     esawc_tile = format_tile_fpath(tilename_dpath, tilename, esawc_fpath)
     gdal_regrid(esawc_fpath, esawc_tile, xmin, ymin, xmax, ymax, xres, yres, mode='cat')
     ds['esawc'] = esawc_tile
@@ -102,22 +97,22 @@ def retile_datasets(
 
     fdem_file = tdem_dem_tile.replace('.tif', '_F.tif')
     mask_file = tdem_dem_tile.replace('.tif', '_M.tif')
-    if not os.path.isfile(fdem_file):
+
+    dem_fw = fdem_file.replace('F.tif', '_Fw.tif')
+    dem_mw = mask_file.replace('M.tif', '_Mw.tif')
+
+    if not os.path.isfile(dem_fw):
         fdem_file, mask_file = filter_tandemx_noise(tdem_dem_tile, 
                                                     tdem_hem_tile, 
                                                     tdem_com_tile, 
-                                                    n_iter=1)
-    
-    ds['tdem_dem_f'] = fdem_file
-    ds['tdem_dem_m'] = mask_file
-    
-    dem_fw = fdem_file.replace('F.tif', '_Fw.tif')
-    dem_mw = mask_file.replace('M.tif', '_Mw.tif')
+                                                    n_iter=1)  
     if not os.path.isfile(dem_fw):
         filter_water(fdem_file, mask_file, lcm_lwm_fn, esa_lwm_fn, wbm_lwm_fn)
 
     ds['tdem_dem_fw'] = dem_fw
     ds['tdem_dem_mw'] = dem_mw
+    #os.remove(fdem_file)
+    #os.remove(dem_mw)
 
     tname = os.path.basename(lcm_lwm_fn).split('_')[0]
     combined_mask_file = os.path.join(os.path.dirname(lcm_lwm_fn), f'{tname}_LWM.tif')
@@ -160,7 +155,7 @@ def retile_datasets(
     edem_demw84_tile = format_tile_fpath(tilename_dpath, tilename, edem_edem_W84_fpath)
     gdal_regrid(edem_edem_W84_fpath, edem_demw84_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['edem_demw84'] = edem_demw84_tile 
-
+   
     egm08_tile = format_tile_fpath(tilename_dpath, tilename, egm08_fpath)
     gdal_regrid(egm08_fpath, egm08_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['egm08'] = egm08_tile
@@ -169,64 +164,71 @@ def retile_datasets(
     gdal_regrid(egm96_fpath, egm96_tile, xmin, ymin, xmax, ymax, xres, yres, mode='num')
     ds['egm96'] = egm96_tile
 
-    label_kmeans(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, n_clusters=2, slope=False, overwrite=False)
-    label_kmeans(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, n_clusters=2, slope=False, overwrite=False)
+    # label_kmeans(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, n_clusters=2, slope=False, overwrite=False)
+    # label_kmeans(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, n_clusters=2, slope=False, overwrite=False)
 
-    label_kmeans(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, n_clusters=2, slope=True, overwrite=False)
-    label_kmeans(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, n_clusters=2, slope=True, overwrite=False)
+    # label_kmeans(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, n_clusters=2, slope=True, overwrite=False)
+    # label_kmeans(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, n_clusters=2, slope=True, overwrite=False)
 
-    label_slope_adathresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, overwrite=False)
-    label_slope_adathresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, overwrite=False)
+    # label_slope_adathresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, overwrite=False)
+    # label_slope_adathresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, overwrite=False)
 
-    label_lcmultithresh_slope(dtm_path=pdem_tile, landcover_path=esawc_tile, percentile=75, overwrite=False)
-    label_lcmultithresh_slope(dtm_path=ldar_tile, landcover_path=esawc_tile, percentile=75, overwrite=False)
+    # label_lcmultithresh_slope(dtm_path=pdem_tile, landcover_path=esawc_tile, percentile=75, overwrite=False)
+    # label_lcmultithresh_slope(dtm_path=ldar_tile, landcover_path=esawc_tile, percentile=75, overwrite=False)
 
-    label_lcmultithresh(dtm_path=pdem_tile, landcover_path=esawc_tile, percentiles=[60, 75, 90], overwrite=False)
-    label_lcmultithresh(dtm_path=ldar_tile, landcover_path=esawc_tile, percentiles=[60, 75, 90], overwrite=False)
+    # label_lcmultithresh(dtm_path=pdem_tile, landcover_path=esawc_tile, percentiles=[60, 75, 90], overwrite=False)
+    # label_lcmultithresh(dtm_path=ldar_tile, landcover_path=esawc_tile, percentiles=[60, 75, 90], overwrite=False)
 
-    label_landdata(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, landcover_path=esawc_tile, overwrite=False)
-    label_landdata(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, landcover_path=esawc_tile, overwrite=False)
+    # label_landdata(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, landcover_path=esawc_tile, overwrite=False)
+    # label_landdata(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, landcover_path=esawc_tile, overwrite=False)
    
-    label_multiclass(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, overwrite=False)
-    label_multiclass(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, overwrite=False)
+    # label_multiclass(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, overwrite=False)
+    # label_multiclass(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, overwrite=False)
 
-    label_normthresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, threshold=0.5, overwrite=False, norm=True)
-    label_normthresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, threshold=0.5, overwrite=False, norm=False)
+    # label_normthresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, threshold=0.5, overwrite=False, norm=True)
+    # label_normthresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, threshold=0.5, overwrite=False, norm=False)
 
-    label_normthresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, threshold=0.5, overwrite=False, norm=True)
-    label_normthresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, threshold=0.5, overwrite=False, norm=False)
+    # label_normthresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, threshold=0.5, overwrite=False, norm=True)
+    # label_normthresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, threshold=0.5, overwrite=False, norm=False)
 
-    label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, dynamic=True, base_threshold=0.5, overwrite=False)
-    label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, dynamic=True, base_threshold=0.5, overwrite=False)
+    # label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, dynamic=True, base_threshold=0.5, overwrite=False)
+    # label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, dynamic=True, base_threshold=0.5, overwrite=False)
 
-    label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, dynamic=False, base_threshold=0.5, overwrite=False)
-    label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, dynamic=False, base_threshold=0.5, overwrite=False)
+    # label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=pdem_tile, dynamic=False, base_threshold=0.5, overwrite=False)
+    # label_height_adathresh(dsm_path=edem_demw84_tile, dtm_path=ldar_tile, dynamic=False, base_threshold=0.5, overwrite=False)
 
     # Define file paths for new terrain derivatives
-    tile_slp = edem_demw84_tile.replace('.tif', '_slp.tif')
-    tile_tpi = edem_demw84_tile.replace('.tif', '_tpi.tif')
-    tile_tri = edem_demw84_tile.replace('.tif', '_tri.tif')
-    tile_roughness = edem_demw84_tile.replace('.tif', '_rgx.tif')
+    # tile_slp = edem_demw84_tile.replace('.tif', '_slp.tif')
+    # tile_tpi = edem_demw84_tile.replace('.tif', '_tpi.tif')
+    # tile_tri = edem_demw84_tile.replace('.tif', '_tri.tif')
+    # tile_roughness = edem_demw84_tile.replace('.tif', '_rgx.tif')
 
-    # Compute Slope
-    if not os.path.isfile(tile_slp):
-        dem_derivative(fi=edem_demw84_tile, fo=tile_slp, mode='slope')
-    ds['edem_slp'] = tile_slp
+    # # Compute Slope
+    # if not os.path.isfile(tile_slp):
+    #     dem_derivative(fi=edem_demw84_tile, fo=tile_slp, mode='slope')
+    # ds['edem_slp'] = tile_slp
 
-    # Compute TPI
-    if not os.path.isfile(tile_tpi):
-        dem_derivative(fi=edem_demw84_tile, fo=tile_tpi, mode='TPI')
-    ds['edem_tpi'] = tile_tpi
+    # # Compute TPI
+    # if not os.path.isfile(tile_tpi):
+    #     dem_derivative(fi=edem_demw84_tile, fo=tile_tpi, mode='TPI')
+    # ds['edem_tpi'] = tile_tpi
 
-    # Compute TRI
-    if not os.path.isfile(tile_tri):
-        dem_derivative(fi=edem_demw84_tile, fo=tile_tri, mode='TRI')
-    ds['edem_tri'] = tile_tri
+    # # Compute TRI
+    # if not os.path.isfile(tile_tri):
+    #     dem_derivative(fi=edem_demw84_tile, fo=tile_tri, mode='TRI')
+    # ds['edem_tri'] = tile_tri
 
-    # Compute Roughness
-    if not os.path.isfile(tile_roughness):
-        dem_derivative(fi=edem_demw84_tile, fo=tile_roughness, mode='roughness')
-    ds['edem_rgx'] = tile_roughness
+    # # Compute Roughness
+    # if not os.path.isfile(tile_roughness):
+    #     dem_derivative(fi=edem_demw84_tile, fo=tile_roughness, mode='roughness')
+    # ds['edem_rgx'] = tile_roughness
+
+    edem_grid_tile = f'{tilename_dpath}/{tilename}_EDEM_GRID.tif'
+    print('*'*60)
+    print(edem_grid_tile)
+    print('-*-'*60)
+    raster_calc(edem_dem_tile, edem_demw84_tile, "subtract", edem_grid_tile)
+    ds['edem_grid'] = edem_grid_tile
 
     yaml_tile = os.path.join(tilename_dpath, f'{tilename}_ds.yaml')
     # csv_tile = os.path.join(tilename_dpath, f'{tilename}_ds.csv')
@@ -235,6 +237,7 @@ def retile_datasets(
     uops.write_yaml(ds, yaml_tile)
     print('yaml_tile:', yaml_tile)
     print('Already exists!!')
+    
     print(ds)
 
 def process_tile(

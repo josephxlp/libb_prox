@@ -5,7 +5,7 @@ import time
 from upaths import tilenames_full,TILES12_DPATH,tilenames_all,PATCHES_XDPATH
 from utilspatches import (load_patch_params,load_variables,
                           filter_by_tilename,generate_tiles,get_tile_dict)
-from uvars import vending_all,nending_all 
+#from uvars import vending_all,nending_all 
 
 def create_meta_df(tilenames,TILES12_DPATH,tilename,vending_all,nending_all):
     dlist = []
@@ -18,16 +18,22 @@ def create_meta_df(tilenames,TILES12_DPATH,tilename,vending_all,nending_all):
     dd = pd.DataFrame(dlist)
     return dd 
 
+s1_ending = ['S1.tif']
+s2_ending = ['S2.tif'] 
+tar_ending =  ['NegroAOIDTM.tif', 'multi_DTM_LiDAR.tif','edem_W84.tif']
 
+s1_names = ['s1']
+s2_names = ['s2']
+tar_names = ['pdem','ldem', 'edem']
 
+nending_all =  tar_names+s1_names+s2_names
+vending_all = tar_ending+s1_ending+s2_ending
 
 
 X = 12 
-ps = int(256 * 8) #1,4
+ps = int(256 * 12) #1,4,8 12
 tilenames = tilenames_all#tilenames_full
-
-
-
+tilenames = ['N10E105','S01W063']
 
 
 if __name__ == '__main__':

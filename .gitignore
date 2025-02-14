@@ -3,6 +3,10 @@ __pycache__
 .env 
 .secret.py 
 uvars.py 
+*var.py 
+*vars.py 
+*path.py 
+*paths.py 
 
 
 

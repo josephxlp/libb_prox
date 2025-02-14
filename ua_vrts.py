@@ -97,26 +97,39 @@ def get_all_VRT_TXT_FILE_paths(yaml_data):
     return VRT_paths, TXT_paths, FILE_paths
 
 def buildVRT_from_list(txt_i, vrt_i, files):
-    write_list_to_txt(txt_i, files) 
-    buildVRT(txt_i, vrt_i)
+    if not isfile(txt_i):
+        write_list_to_txt(txt_i, files) 
+    else:
+        print(f'file already created @:{txt_i}')
+    if not isfile(vrt_i):
+        buildVRT(txt_i, vrt_i)
+    else:
+        print(f'file already created @:{vrt_i}')
 
 def write_list_to_txt(txt, llist):
-    with open(txt, 'w') as txt_write:
-        for i in llist:
-            txt_write.write(i+'\n')
+    if not isfile(txt):
+        with open(txt, 'w') as txt_write:
+            for i in llist:
+                txt_write.write(i+'\n')
+    else:
+        print(f'file already created @:{txt}')
+
     print('write_list_to_txt')
 
 def buildVRT(txt, vrt):
-    cmd = ['gdalbuildvrt', '-overwrite', '-input_file_list', txt, vrt]
-    try:
-        subprocess.run(cmd, check=True)
-        print("VRT file created successfully at:", vrt)
-    except subprocess.CalledProcessError as e:
-        print("Error:", e)
-    except FileNotFoundError:
-        print(f"Error: One or more files listed in '{txt}' do not exist.")
-    except Exception as e:
-        print("An unexpected error occurred:", e)
+    if not isfile(vrt):
+        cmd = ['gdalbuildvrt', '-overwrite', '-input_file_list', txt, vrt]
+        try:
+            subprocess.run(cmd, check=True)
+            print("VRT file created successfully at:", vrt)
+        except subprocess.CalledProcessError as e:
+            print("Error:", e)
+        except FileNotFoundError:
+            print(f"Error: One or more files listed in '{txt}' do not exist.")
+        except Exception as e:
+            print("An unexpected error occurred:", e)
+    else:
+        print(f'file already created @:{vrt}')
 
 
 def process_lfiles(ldar_files, ldar_wrapped_dpath, epsg, xres):
@@ -127,7 +140,7 @@ def process_lfiles(ldar_files, ldar_wrapped_dpath, epsg, xres):
     epsg_l = np.repeat(epsg, len(ldar_wrapped_files))
     res_l = np.repeat(xres, len(ldar_wrapped_files))
 
-    with ProcessPoolExecutor() as ppe:
+    with ProcessPoolExecutor(10) as ppe:
         ppe.map(warp_raster, ldar_files, ldar_wrapped_files, 
                 res_l, epsg_l)
     return ldar_wrapped_files
